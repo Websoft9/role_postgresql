@@ -2,6 +2,9 @@
 # CentOS7: 9.5 9.6 10 11 12 13
 # AmazonLinux2: 9.5 9.6 10 11 12 13
 
+# install_way: "package" | False
+postgresql_install_server: "package"
+
 postgresql_version: "9.5"    
 
 # administrator password for user [postgres]

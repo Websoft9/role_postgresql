@@ -11,46 +11,55 @@
     repo: 'deb http://apt.postgresql.org/pub/repos/apt/ {{ansible_distribution_release}}-pgdg main'
     filename: pgdg
 
-- name: Install PostgreSQL {{postgresql_version}}
-  apt:  
-    name: postgresql-{{postgresql_version}}
-    
-- name: Change postgresql databases METHOD
-  lineinfile:
-      dest: /etc/postgresql/{{postgresql_version}}/main/pg_hba.conf
-      regexp: 'host    all             all             127.0.0.1/32            ident'
-      line: "host    all             all             127.0.0.1/32            md5"
-      state: present
-      
 - block:
-  - name: enable PostgrepSQL Remote connection by modify postgresql.conf
+  - name: Install PostgreSQL {{postgresql_version}}
+    apt:  
+      name: postgresql-{{postgresql_version}}
+      
+  - name: Change postgresql databases METHOD
     lineinfile:
-      dest: /etc/postgresql/{{postgresql_version}}/main/postgresql.conf
-      regexp: "#listen_addresses = 'localhost'"
-      line: "listen_addresses = '*'"
-      state: present
+        dest: /etc/postgresql/{{postgresql_version}}/main/pg_hba.conf
+        regexp: 'host    all             all             127.0.0.1/32            ident'
+        line: "host    all             all             127.0.0.1/32            md5"
+        state: present
+        
+  - block:
+    - name: enable PostgrepSQL Remote connection by modify postgresql.conf
+      lineinfile:
+        dest: /etc/postgresql/{{postgresql_version}}/main/postgresql.conf
+        regexp: "#listen_addresses = 'localhost'"
+        line: "listen_addresses = '*'"
+        state: present
 
-  - name: enable PostgrepSQL Remote connection by modify pg_hba.conf
-    lineinfile:
-      dest: /etc/postgresql/{{postgresql_version}}/main/pg_hba.conf
-      line: "host    all             all             0.0.0.0/0            md5"
-  when: postgresql_remote
+    - name: enable PostgrepSQL Remote connection by modify pg_hba.conf
+      lineinfile:
+        dest: /etc/postgresql/{{postgresql_version}}/main/pg_hba.conf
+        line: "host    all             all             0.0.0.0/0            md5"
+    when: postgresql_remote
 
-- name: Restart PostgreSQL Service
-  service: name=postgresql@{{postgresql_version}}-main.service state=restarted enabled=yes
+  - name: Restart PostgreSQL Service
+    service: name=postgresql@{{postgresql_version}}-main.service state=restarted enabled=yes
 
-- name: Change postgresql password
-  become: yes
-  become_user: postgres
-  postgresql_user:
-    name: postgres
-    password: '{{postgresql_password}}'
-    
-- name: Create soft link of PostgreSQL
-  shell: |
-    ln -sf /var/lib/postgresql/{{postgresql_version}} /data/postgresql/pgdata
-    ln -sf /etc/postgresql/{{postgresql_version}} /data/postgresql/config
-    ln -sf /etc/postgresql/{{postgresql_version}}/main/postgresql.conf /data/postgresql
-    ln -sf /data/postgresql/config /data/config/postgresql
-    ln -sf /var/log/postgresql /data/logs
-    ln -sf /usr/lib/postgresql/{{postgresql_version}}/bin/pg_upgrade /usr/bin
+  - name: Change postgresql password
+    become: yes
+    become_user: postgres
+    postgresql_user:
+      name: postgres
+      password: '{{postgresql_password}}'
+      
+  - name: Create soft link of PostgreSQL
+    shell: |
+      ln -sf /var/lib/postgresql/{{postgresql_version}} /data/postgresql/pgdata
+      ln -sf /etc/postgresql/{{postgresql_version}} /data/postgresql/config
+      ln -sf /etc/postgresql/{{postgresql_version}}/main/postgresql.conf /data/postgresql
+      ln -sf /data/postgresql/config /data/config/postgresql
+      ln -sf /var/log/postgresql /data/logs
+      ln -sf /usr/lib/postgresql/{{postgresql_version}}/bin/pg_upgrade /usr/bin
+  
+  when: postgresql_install_server == "package"
+
+- block: 
+  - name: Install PostgreSQL Client
+    apt:  
+      name: postgresql-client-{{postgresql_version}}
+  when: not postgresql_install_server

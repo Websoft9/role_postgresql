@@ -7,7 +7,6 @@
     postgresql_version_regex: "{{ postgresql_version | regex_replace('^(?P<before>.+).(?P<after>\\d+)$', '\\g<before>\\g<after>')}}"
     postgresql_config_path: "/var/lib/pgsql/{{postgresql_version}}/data/pg_hba.conf"
 
-
 - name: Install the repository RPM
   yum:
     name: "{{postgresql_repo_meta[postgresql_version].RedHat}}"
@@ -26,65 +25,75 @@
       chdir: /tmp
   when: ansible_distribution == 'Amazon'
 
-- name: Install PostgreSQL
-  yum: 
-    name: ["postgresql{{ postgresql_version_regex }}","postgresql{{ postgresql_version_regex }}-server"]
-    state: latest
+- block:
+  - name: Install PostgreSQL
+    yum: 
+      name: ["postgresql{{ postgresql_version_regex }}","postgresql{{ postgresql_version_regex }}-server"]
+      state: latest
     
-- name: Ansible check file exists
-  stat:
-    path: "/var/lib/pgsql/{{postgresql_version}}/data/pg_hba.conf"
-  register: result
+  - name: Ansible check file exists
+    stat:
+      path: "/var/lib/pgsql/{{postgresql_version}}/data/pg_hba.conf"
+    register: result
+
+  - block: 
+    - name: Initialize databases for 9.x
+      command: /usr/pgsql-{{ postgresql_version }}/bin/postgresql{{ postgresql_version_regex }}-setup initdb 
+      when: postgresql_version is match("[0-9]+\.[0-9]+")
+
+    - name: Initialize databases for 1x
+      command: /usr/pgsql-{{ postgresql_version }}/bin/postgresql-{{ postgresql_version_regex }}-setup initdb 
+      when: not postgresql_version is match("[0-9]+\.[0-9]+")
+      
+    when: not result.stat.exists
+    
+  - name: Change postgresql databases METHOD
+    lineinfile:
+        dest: /var/lib/pgsql/{{postgresql_version}}/data/pg_hba.conf
+        regexp: 'host    all             all             127.0.0.1/32            ident'
+        line: "host    all             all             127.0.0.1/32            md5"
+        state: present
+        
+  - block:
+    - name: enable PostgrepSQL Remote connection by modify postgresql.conf
+      lineinfile:
+        dest: /var/lib/pgsql/{{postgresql_version}}/data/postgresql.conf
+        regexp: "#listen_addresses = 'localhost'"
+        line: "listen_addresses = '*'"
+        state: present
+
+    - name: enable PostgrepSQL Remote connection by modify pg_hba.conf
+      lineinfile:
+        dest: /var/lib/pgsql/{{postgresql_version}}/data/pg_hba.conf
+        line: "host    all             all             0.0.0.0/0            md5"
+    when: postgresql_remote
+    
+  - name: Start PostgreSQL Service
+    service: name=postgresql-{{ postgresql_version }} state=started enabled=yes
+
+  - name: Change postgresql password
+    become: yes
+    become_user: postgres
+    postgresql_user:
+      name: postgres
+      password: '{{postgresql_password}}'
+  
+  - name: Create soft link of PostgreSQL
+    shell: |
+      ln -sf /usr/lib/systemd/system/postgresql-{{ postgresql_version }}.service  /etc/systemd/system/postgresql.service
+      ln -sf /var/lib/pgsql/{{postgresql_version}} /data/postgresql/pgdata
+      ln -sf /var/lib/pgsql/{{postgresql_version}}/data/pg_hba.conf /data/postgresql/config
+      ln -sf /var/lib/pgsql/{{postgresql_version}}/data/postgresql.conf /data/postgresql/config
+      ln -sf /var/lib/pgsql/{{postgresql_version}}/data/pg_ident.conf /data/postgresql/config
+      ln -sf /data/postgresql/config /data/config/postgresql
+      ln -sf /var/lib/pgsql/{{postgresql_version}}/data/log /data/postgresql
+      ln -sf /usr/pgsql-{{ postgresql_version }}/bin/pg_upgrade /usr/bin
+
+  when: postgresql_install_server == "package"
 
 - block: 
-  - name: Initialize databases for 9.x
-    command: /usr/pgsql-{{ postgresql_version }}/bin/postgresql{{ postgresql_version_regex }}-setup initdb 
-    when: postgresql_version is match("[0-9]+\.[0-9]+")
-
-  - name: Initialize databases for 1x
-    command: /usr/pgsql-{{ postgresql_version }}/bin/postgresql-{{ postgresql_version_regex }}-setup initdb 
-    when: not postgresql_version is match("[0-9]+\.[0-9]+")
-    
-  when: not result.stat.exists
-  
-- name: Change postgresql databases METHOD
-  lineinfile:
-      dest: /var/lib/pgsql/{{postgresql_version}}/data/pg_hba.conf
-      regexp: 'host    all             all             127.0.0.1/32            ident'
-      line: "host    all             all             127.0.0.1/32            md5"
-      state: present
-      
-- block:
-  - name: enable PostgrepSQL Remote connection by modify postgresql.conf
-    lineinfile:
-      dest: /var/lib/pgsql/{{postgresql_version}}/data/postgresql.conf
-      regexp: "#listen_addresses = 'localhost'"
-      line: "listen_addresses = '*'"
-      state: present
-
-  - name: enable PostgrepSQL Remote connection by modify pg_hba.conf
-    lineinfile:
-      dest: /var/lib/pgsql/{{postgresql_version}}/data/pg_hba.conf
-      line: "host    all             all             0.0.0.0/0            md5"
-  when: postgresql_remote
-  
-- name: Start PostgreSQL Service
-  service: name=postgresql-{{ postgresql_version }} state=started enabled=yes
-
-- name: Change postgresql password
-  become: yes
-  become_user: postgres
-  postgresql_user:
-    name: postgres
-    password: '{{postgresql_password}}'
- 
-- name: Create soft link of PostgreSQL
-  shell: |
-    ln -sf /usr/lib/systemd/system/postgresql-{{ postgresql_version }}.service  /etc/systemd/system/postgresql.service
-    ln -sf /var/lib/pgsql/{{postgresql_version}} /data/postgresql/pgdata
-    ln -sf /var/lib/pgsql/{{postgresql_version}}/data/pg_hba.conf /data/postgresql/config
-    ln -sf /var/lib/pgsql/{{postgresql_version}}/data/postgresql.conf /data/postgresql/config
-    ln -sf /var/lib/pgsql/{{postgresql_version}}/data/pg_ident.conf /data/postgresql/config
-    ln -sf /data/postgresql/config /data/config/postgresql
-    ln -sf /var/lib/pgsql/{{postgresql_version}}/data/log /data/postgresql
-    ln -sf /usr/pgsql-{{ postgresql_version }}/bin/pg_upgrade /usr/bin
+  - name: Install PostgreSQL Client
+    yum: 
+      name: "postgresql{{ postgresql_version_regex }}"
+      state: latest
+  when: not postgresql_install_server 
