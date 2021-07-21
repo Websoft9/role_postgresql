@@ -3,3 +3,42 @@
   remote_user: root
   roles:
     - role_postgresql
+
+  vars_prompt:
+    - name: 'postgresql_selection'
+      prompt: "\nPlease choose the number for PostgreSQL version [ 1/2/../7] \n\n
+      1: PostgreSQL 9.4 (only for Ubuntu)\n
+      2: PostgreSQL 9.5\n
+      3: PostgreSQL 9.6\n
+      4: PostgreSQL 10\n
+      5: PostgreSQL 11\n
+      6: PostgreSQL 12\n
+      7: PostgreSQL 13\n"
+      private: no
+      default: 6
+      
+    - name: 'postgresql_input_password'
+      prompt: "\nPlease your PostgreSQL root password: \n\ndefault"
+      private: no
+      default: 123456
+
+  vars:
+    postgresql_select:
+      '1': '9.4'
+      '2': '9.5'
+      '3': '9.6'
+      '4': '10'
+      '5': '11'
+      '6': '12'
+      '7': '13'
+    postgresql_version: "{{postgresql_select[postgresql_selection]}}" 
+    postgresql_password: "{{postgresql_input_password}}"
+
+  pre_tasks:
+   - debug:
+       msg: Will install PostgreSQL {{postgresql_version}}
+
+  post_tasks:
+    - name: post_tasks
+      debug:
+        msg: PostgreSQL default password is {{postgresql_password}} , please modify it by yourself
