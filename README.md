@@ -81,6 +81,12 @@ postgresql_users:
     password: 123456
     priv: ALL
 ```
+## Installation
+
+```
+git clone https://github.com/Websoft9/role_postgresql.git
+ansible-playbook role_postgresql/tests/test.yml
+```
 
 ## FAQ
 
