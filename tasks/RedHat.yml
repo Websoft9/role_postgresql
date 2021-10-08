@@ -7,8 +7,14 @@
     postgresql_version_regex: "{{ postgresql_version | regex_replace('^(?P<before>.+).(?P<after>\\d+)$', '\\g<before>\\g<after>')}}"
     postgresql_config_path: "/var/lib/pgsql/{{postgresql_version}}/data/pg_hba.conf"
 
+- name: Install the repository RPM
+  shell:
+    yum isntall -y {{postgresql_repo_meta[postgresql_version].RedHat}}
+  failed_when: False
+  when: ansible_distribution != 'Amazon'
+
 - block:
-  - name: Import repository on Linux
+  - name: Import repository on Amazon Linux
     shell: |
       wget https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
       rpm2cpio pgdg-redhat-repo-latest.noarch.rpm | cpio -div
@@ -18,6 +24,8 @@
       rm -rf /tmp/etc/  /tmp/pgdg-redhat-repo-latest.noarch.rpm
     args:
       chdir: /tmp
+  when: ansible_distribution == 'Amazon'
+
 
 - block:
   - name: Install PostgreSQL
