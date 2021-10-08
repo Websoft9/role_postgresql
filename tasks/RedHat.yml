@@ -8,7 +8,7 @@
     postgresql_config_path: "/var/lib/pgsql/{{postgresql_version}}/data/pg_hba.conf"
 
 - block:
-  - name: Import repository on Amazon Linux
+  - name: Import repository on Linux
     shell: |
       wget https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
       rpm2cpio pgdg-redhat-repo-latest.noarch.rpm | cpio -div
