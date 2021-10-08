@@ -9,7 +9,7 @@
 
 - name: Install the repository RPM
   shell:
-    yum isntall -y {{postgresql_repo_meta[postgresql_version].RedHat}}
+    yum install -y {{postgresql_repo_meta[postgresql_version].RedHat}}
   failed_when: False
   when: ansible_distribution != 'Amazon'
 
