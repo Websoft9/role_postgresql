@@ -8,8 +8,8 @@
     postgresql_config_path: "/var/lib/pgsql/{{postgresql_version}}/data/pg_hba.conf"
 
 - name: Install the repository RPM
-  yum:
-    name: "{{postgresql_repo_meta[postgresql_version].RedHat}}"
+  shell:
+    yum install -y {{postgresql_repo_meta[postgresql_version].RedHat}}
   when: ansible_distribution != 'Amazon'
 
 - block:
