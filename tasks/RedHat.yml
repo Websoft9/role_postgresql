@@ -7,9 +7,10 @@
     postgresql_version_regex: "{{ postgresql_version | regex_replace('^(?P<before>.+).(?P<after>\\d+)$', '\\g<before>\\g<after>')}}"
     postgresql_config_path: "/var/lib/pgsql/{{postgresql_version}}/data/pg_hba.conf"
 
-- name: Install the repository RPM
-  shell:
-    yum install -y {{postgresql_repo_meta[postgresql_version].RedHat}}
+- name: Install the repository RPM and skip the cert validate for error
+  yum:
+    name: "{{postgresql_repo_meta[postgresql_version].RedHat}}"
+    validate_certs: no
   when: ansible_distribution != 'Amazon'
 
 - block:
