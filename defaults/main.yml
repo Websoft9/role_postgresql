@@ -10,7 +10,7 @@ postgresql_version: "9.5"
 # administrator password for user [postgres]
 postgresql_password: "123456"
 
-postgresql_remote: False
+postgresql_remote: True
 
 postgresql_databases: []
 #  - name: awx 
