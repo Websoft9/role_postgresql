@@ -13,7 +13,7 @@
       4: PostgreSQL 10\n
       5: PostgreSQL 11\n
       6: PostgreSQL 12\n
-      7: PostgreSQL 13\n"
+      7: PostgreSQL 14\n"
       private: no
       default: 6
       
@@ -30,7 +30,7 @@
       '4': '10'
       '5': '11'
       '6': '12'
-      '7': '13'
+      '7': '14'
     postgresql_version: "{{postgresql_select[postgresql_selection]}}" 
     postgresql_password: "{{postgresql_input_password}}"
 
