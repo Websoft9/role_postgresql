@@ -40,6 +40,9 @@
   - name: Restart PostgreSQL Service
     service: name=postgresql@{{postgresql_version}}-main.service state=restarted enabled=yes
 
+  - name: Sleep 15s
+    shell: sleep 15s
+    
   - name: Change postgresql password
     become: yes
     become_user: postgres
